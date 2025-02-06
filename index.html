@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Human Hours - P2P Skill Marketplace</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/@walletconnect/web3-provider"></script>
-    <script src="https://unpkg.com/@walletconnect/core@2.10.1/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@walletconnect/utils@2.10.1/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@web3modal/standalone@2.4.1/dist/index.umd.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.1/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@1.7.1/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mobile-detect@1.4.5/mobile-detect.min.js"></script>
+    <!-- WalletConnect v2 Dependencies -->
+    <script src="https://unpkg.com/@walletconnect/core@2.18.0/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@reown/walletkit@1.2.0/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@walletconnect/utils@latest/dist/index.umd.js"></script>
     <style>
         .bg-custom-green { background-color: #22C55E; }
         .notifications-dropdown {
@@ -262,16 +265,16 @@
             </div>
             <div class="space-y-4">
                 <button class="wallet-option w-full" onclick="connectWallet('metamask')">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="MetaMask">
+                    <img src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg" alt="MetaMask">
                     <span>MetaMask</span>
                 </button>
                 <button class="wallet-option w-full" onclick="connectWallet('phantom')">
-                    <img src="https://www.gitbook.com/cdn-cgi/image/width=40,height=40,fit=contain,dpr=2,format=auto/https%3A%2F%2F1370014762-files.gitbook.io%2F~%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FXHNxcF1HoQPbtMMEVXQx%252Ficon%252FqD0qBfUrJ3vZhJ1JQJGY%252FPhantom%2520icon%2520-%2520Color.png%3Falt%3Dmedia%26token%3Dfa3e2ed6-e0ef-4a46-948f-46ded7c22f92" alt="Phantom">
+                    <img src="https://raw.githubusercontent.com/phantom-labs/press-kit/main/phantom-logo.svg" alt="Phantom">
                     <span>Phantom</span>
                 </button>
-                <button class="wallet-option w-full" onclick="connectWallet('walletconnect')">
-                    <img src="https://raw.githubusercontent.com/WalletConnect/walletconnect-assets/master/Icon/Blue%20(Default)/Icon.svg" alt="WalletConnect">
-                    <span>WalletConnect</span>
+                <button class="wallet-option w-full" onclick="connectWallet('subwallet')">
+                    <img src="https://docs.subwallet.app/img/logo.svg" alt="SubWallet">
+                    <span>SubWallet</span>
                 </button>
             </div>
         </div>
@@ -339,31 +342,26 @@
 
         // Initialize WalletConnect Core and WalletKit
         const initWalletKit = async () => {
+            const core = new Core({
+                projectId: '915b3adf7f8d277f33d18e26150036d8'
+            });
+
+            const metadata = {
+                name: 'HumanHours',
+                description: 'P2P Skill Marketplace',
+                url: 'https://framoccino.github.io/Human-Hours/',
+                icons: ['https://framoccino.github.io/Human-Hours/logo.png']
+            };
+
             try {
-                const core = new window.Core({
-                    projectId: '915b3adf7f8d277f33d18e26150036d8'
+                const walletKit = await WalletKit.init({
+                    core,
+                    metadata
                 });
-
-                const metadata = {
-                    name: 'HumanHours',
-                    description: 'P2P Skill Marketplace',
-                    url: 'https://framoccino.github.io/Human-Hours/',
-                    icons: ['https://framoccino.github.io/Human-Hours/images/logo.png']
-                };
-
-                try {
-                    const walletKit = await window.WalletKit.init({
-                        core,
-                        metadata
-                    });
-                    
-                    return walletKit;
-                } catch (error) {
-                    console.error('Failed to initialize WalletKit:', error);
-                    throw error;
-                }
+                
+                return walletKit;
             } catch (error) {
-                console.error('Failed to initialize Core:', error);
+                console.error('Failed to initialize WalletKit:', error);
                 throw error;
             }
         };
