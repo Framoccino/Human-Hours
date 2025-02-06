@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Human Hours - P2P Skill Marketplace</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <!-- Web3 and WalletConnect Dependencies -->
-    <script src="https://unpkg.com/@web3modal/ethereum@2.7.1/dist/cdn.js"></script>
-    <script src="https://unpkg.com/@web3modal/html@2.7.1/dist/cdn.js"></script>
-    <script src="https://unpkg.com/viem@1.19.11/dist/cdn.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/web3@1.9.0/dist/web3.min.js"></script>
+    <!-- WalletConnect Dependencies -->
+    <script src="https://unpkg.com/@wagmi/core@1.4.7/dist/wagmi-core.umd.min.js"></script>
+    <script src="https://unpkg.com/@web3modal/wagmi@3.4.0/dist/cdn.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mobile-detect@1.4.5/mobile-detect.min.js"></script>
     <style>
         .bg-custom-green { background-color: #22C55E; }
@@ -274,46 +272,52 @@
             }
         });
 
-        // Initialize Web3Modal
+        // Initialize WalletConnect
         const projectId = '915b3adf7f8d277f33d18e26150036d8';
-
-        const ethereumClient = window.w3m.createEthereumClient({
-            projectId,
-            chains: [{
-                id: 1,
-                name: 'Ethereum',
-                rpcUrl: 'https://ethereum.rpc.thirdweb.com'
-            }, {
-                id: 137,
-                name: 'Polygon',
-                rpcUrl: 'https://polygon.rpc.thirdweb.com'
-            }]
-        });
-
-        const web3modal = window.w3m.createWeb3Modal({
-            projectId,
-            themeMode: 'light',
-            themeVariables: {
-                '--w3m-accent-color': '#22C55E'
-            },
-            ethereumClient
-        });
-
-        // Remove the old modal HTML since we're using Web3Modal's UI
-        document.querySelector('#walletModal')?.remove();
-
-        // Update the connect button
-        const connectButton = document.createElement('w3m-button');
-        connectButton.classList.add('px-4', 'py-2', 'bg-green-600', 'text-white', 'rounded-md', 'hover:bg-green-700', 'transition-colors');
         
+        // Configure Web3Modal
+        const web3modal = new window.Web3Modal.Modal({
+            projectId: projectId,
+            walletConnectVersion: 2,
+            defaultChain: 'ethereum',
+            themeMode: 'light',
+            themeColor: 'green',
+            explorerRecommendedWalletIds: 'ALL'
+        })
+
+        // Add connection button
+        const connectButton = document.createElement('w3m-button');
+        connectButton.setAttribute('balance', 'show');
+        connectButton.classList.add('px-4', 'py-2', 'bg-green-600', 'text-white', 'rounded-md', 'hover:bg-green-700', 'transition-colors');
+
         // Replace the old button with the new Web3Modal button
         const oldButton = document.querySelector('button.px-4.py-2.bg-green-600');
         oldButton.parentNode.replaceChild(connectButton, oldButton);
 
-        // Handle connection events
-        ethereumClient.watchAccount((account) => {
-            if (account.address) {
-                showStatus(`Connected: ${account.address.slice(0, 6)}...${account.address.slice(-4)}`);
+        // Initialize connection
+        web3modal.subscribeModal((newState) => {
+            if (newState.open) {
+                console.log('Modal is open');
+            } else {
+                console.log('Modal is closed');
+            }
+        })
+
+        // Handle connection status
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('connectionStatus');
+            const messageEl = document.getElementById('connectionMessage');
+            status.className = `connection-status show ${type}`;
+            messageEl.textContent = message;
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 3000);
+        }
+
+        // Listen for account changes
+        window.ethereum?.on('accountsChanged', (accounts) => {
+            if (accounts.length > 0) {
+                showStatus(`Connected: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`);
             } else {
                 showStatus('Disconnected', 'error');
             }
