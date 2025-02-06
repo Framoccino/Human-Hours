@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Human Hours - P2P Skill Marketplace</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.1/dist/umd/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@1.7.1/dist/umd/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mobile-detect@1.4.5/mobile-detect.min.js"></script>
     <!-- WalletConnect v2 Dependencies -->
-    <script src="https://unpkg.com/@walletconnect/core@2.18.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@reown/walletkit@1.2.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@walletconnect/utils@latest/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@walletconnect/web3-provider@2.0.0/dist/umd/index.min.js"></script>
+    <script src="https://unpkg.com/@walletconnect/core@2.0.0/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@walletconnect/sign-client@2.0.0/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@walletconnect/types@2.0.0/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@walletconnect/utils@2.0.0/dist/index.umd.js"></script>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
     <style>
         .bg-custom-green { background-color: #22C55E; }
         .notifications-dropdown {
@@ -342,21 +342,24 @@
 
         // Initialize WalletConnect Core and WalletKit
         const initWalletKit = async () => {
-            const core = new Core({
-                projectId: '915b3adf7f8d277f33d18e26150036d8'
-            });
-
-            const metadata = {
-                name: 'HumanHours',
-                description: 'P2P Skill Marketplace',
-                url: 'https://framoccino.github.io/Human-Hours/',
-                icons: ['https://framoccino.github.io/Human-Hours/logo.png']
-            };
-
             try {
-                const walletKit = await WalletKit.init({
+                const core = new WalletConnect.Core({
+                    projectId: '915b3adf7f8d277f33d18e26150036d8',
+                    logger: 'debug',
+                    relayUrl: 'wss://relay.walletconnect.com',
+                    metadata: {
+                        name: 'HumanHours',
+                        description: 'P2P Skill Marketplace',
+                        url: 'https://framoccino.github.io/Human-Hours/',
+                        icons: ['https://framoccino.github.io/Human-Hours/logo.png']
+                    }
+                });
+
+                const walletKit = await WalletConnect.Client.init({
                     core,
-                    metadata
+                    chains: [1, 137], // Ethereum and Polygon
+                    methods: ['eth_sendTransaction', 'eth_signTransaction', 'eth_sign'],
+                    events: ['chainChanged', 'accountsChanged']
                 });
                 
                 return walletKit;
@@ -389,8 +392,10 @@
                     case 'metamask':
                         if (typeof window.ethereum !== 'undefined') {
                             try {
-                                const connection = await walletKit.connectWallet('metamask');
-                                accounts = await connection.getAccounts();
+                                const connection = await window.ethereum.request({
+                                    method: 'eth_requestAccounts'
+                                });
+                                accounts = connection;
                                 handleSuccessfulConnection(accounts[0]);
                                 showStatus('Successfully connected to MetaMask!');
                             } catch (err) {
@@ -420,9 +425,30 @@
                         break;
 
                     case 'walletconnect':
-                        const connection = await walletKit.connectWallet('walletconnect');
-                        accounts = await connection.getAccounts();
-                        handleSuccessfulConnection(accounts[0]);
+                        try {
+                            const { uri, approval } = await walletKit.connect({
+                                requiredNamespaces: {
+                                    eip155: {
+                                        methods: ['eth_sendTransaction', 'eth_signTransaction'],
+                                        chains: ['eip155:1', 'eip155:137'],
+                                        events: ['chainChanged', 'accountsChanged']
+                                    }
+                                }
+                            });
+                            
+                            // Display QR code for mobile wallet scanning
+                            if (uri) {
+                                // You can use a QR code library to display this
+                                console.log('Scan this QR code with your wallet:', uri);
+                            }
+                            
+                            const session = await approval();
+                            const account = session.namespaces.eip155.accounts[0];
+                            handleSuccessfulConnection(account);
+                        } catch (err) {
+                            showStatus('WalletConnect connection failed', 'error');
+                            throw err;
+                        }
                         break;
                 }
             } catch (error) {
