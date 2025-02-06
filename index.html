@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/mobile-detect@1.4.5/mobile-detect.min.js"></script>
     <!-- WalletConnect v2 Dependencies -->
     <script src="https://unpkg.com/@walletconnect/web3-provider"></script>
-    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script src="https://unpkg.com/web3@1.7.0/dist/web3.min.js"></script>
     <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
     <style>
         .bg-custom-green { background-color: #22C55E; }
@@ -306,14 +306,19 @@
         let provider;
 
         const initWalletConnect = () => {
-            return new WalletConnectProvider({
+            const provider = new WalletConnectProvider({
                 projectId: '915b3adf7f8d277f33d18e26150036d8',
                 chains: [1, 137],
                 rpc: {
-                    1: 'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
+                    1: 'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID',
                     137: 'https://polygon-rpc.com'
+                },
+                qrcode: true,
+                qrcodeModalOptions: {
+                    mobileLinks: ['metamask', 'trust']
                 }
             });
+            return provider;
         };
 
         function openWalletModal() {
@@ -377,44 +382,52 @@
                         }
                         break;
 
+                    case 'phantom':
+                        if ('solana' in window) {
+                            const provider = initWalletConnect();
+                            await provider.enable();
+                            
+                            web3 = new Web3(provider);
+                            accounts = await web3.eth.getAccounts();
+                            
+                            provider.on("accountsChanged", (accounts) => {
+                                handleSuccessfulConnection(accounts[0]);
+                            });
+                            
+                            provider.on("disconnect", () => {
+                                handleAccountsChanged([]);
+                            });
+                            
+                            handleSuccessfulConnection(accounts[0]);
+                            showStatus('Successfully connected with WalletConnect!');
+                        } else if (window.matchMedia('(max-width: 768px)').matches) {
+                            window.location.href = 'https://phantom.app/ul/browse/framoccino.github.io/Human-Hours/';
+                        } else {
+                            window.open('https://phantom.app/', '_blank');
+                        }
+                        break;
+
                     case 'walletconnect':
                         try {
                             const provider = initWalletConnect();
                             await provider.enable();
                             
-                            const web3 = new Web3(provider);
+                            web3 = new Web3(provider);
                             accounts = await web3.eth.getAccounts();
                             
-                            handleSuccessfulConnection(accounts[0]);
-                            showStatus('Successfully connected with WalletConnect!');
+                            provider.on("accountsChanged", (accounts) => {
+                                handleSuccessfulConnection(accounts[0]);
+                            });
                             
                             provider.on("disconnect", () => {
                                 handleAccountsChanged([]);
                             });
+                            
+                            handleSuccessfulConnection(accounts[0]);
+                            showStatus('Successfully connected with WalletConnect!');
                         } catch (err) {
                             showStatus('WalletConnect connection failed', 'error');
                             throw err;
-                        }
-                        break;
-
-                    case 'phantom':
-                        if ('solana' in window) {
-                            try {
-                                const resp = await window.solana.connect();
-                                accounts = resp.publicKey.toString();
-                                handleSuccessfulConnection(accounts);
-                                showStatus('Successfully connected to Phantom!');
-                            } catch (err) {
-                                showStatus('Phantom connection rejected', 'error');
-                                throw err;
-                            }
-                        } else {
-                            showStatus('Phantom not installed', 'error');
-                            if (window.matchMedia('(max-width: 768px)').matches) {
-                                window.location.href = 'https://phantom.app/ul/browse/framoccino.github.io/Human-Hours/';
-                            } else {
-                                window.open('https://phantom.app/', '_blank');
-                            }
                         }
                         break;
                 }
