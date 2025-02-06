@@ -7,6 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.1/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@1.7.1/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mobile-detect@1.4.5/mobile-detect.min.js"></script>
     <style>
         .bg-custom-green { background-color: #22C55E; }
         .notifications-dropdown {
@@ -268,10 +270,38 @@
 
         // Wallet connection functionality
         const walletModal = document.getElementById('walletModal');
-        const connectWalletBtn = document.querySelector('button:contains("Connect Wallet")');
+        const connectWalletBtn = document.querySelector('button.px-4.py-2.bg-green-600');
+
+        // Initialize Web3 providers
+        let web3;
+        let provider;
+
+        const providerOptions = {
+            walletconnect: {
+                package: WalletConnectProvider,
+                options: {
+                    rpc: {
+                        1: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID", // Ethereum Mainnet
+                        137: "https://polygon-rpc.com", // Polygon Mainnet
+                    },
+                }
+            }
+        };
 
         function openWalletModal() {
-            walletModal.classList.add('show');
+            const md = new MobileDetect(window.navigator.userAgent);
+            if (md.mobile()) {
+                // If on mobile, directly open wallet apps
+                const walletDeepLinks = {
+                    metamask: 'https://metamask.app.link/dapp/framoccino.github.io/Human-Hours/',
+                    phantom: 'https://phantom.app/ul/browse/framoccino.github.io/Human-Hours/',
+                    subwallet: 'https://subwallet.app/download'
+                };
+                walletModal.classList.add('show');
+            } else {
+                // On desktop, show modal
+                walletModal.classList.add('show');
+            }
         }
 
         function closeWalletModal() {
@@ -284,31 +314,85 @@
                 switch(type) {
                     case 'metamask':
                         if (typeof window.ethereum !== 'undefined') {
-                            accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                            // Modern dapp browsers
+                            web3 = new Web3(window.ethereum);
+                            accounts = await window.ethereum.request({ 
+                                method: 'eth_requestAccounts' 
+                            });
+                            
+                            // Subscribe to accounts change
+                            window.ethereum.on('accountsChanged', handleAccountsChanged);
+                            
                             const account = accounts[0];
-                            connectWalletBtn.textContent = `${account.slice(0, 6)}...${account.slice(-4)}`;
-                            closeWalletModal();
+                            handleSuccessfulConnection(account);
+                        } else if (window.matchMedia('(max-width: 768px)').matches) {
+                            // Mobile device without MetaMask
+                            window.location.href = 'https://metamask.app.link/dapp/framoccino.github.io/Human-Hours/';
                         } else {
+                            // Desktop without MetaMask
                             window.open('https://metamask.io/download/', '_blank');
                         }
                         break;
+
                     case 'phantom':
-                        if (window.solana) {
-                            accounts = await window.solana.connect();
-                            connectWalletBtn.textContent = `${accounts.publicKey.toString().slice(0, 6)}...`;
-                            closeWalletModal();
+                        if ('solana' in window) {
+                            try {
+                                const resp = await window.solana.connect();
+                                accounts = resp.publicKey.toString();
+                                handleSuccessfulConnection(accounts);
+                            } catch (err) {
+                                console.error('Phantom connection error:', err);
+                            }
+                        } else if (window.matchMedia('(max-width: 768px)').matches) {
+                            window.location.href = 'https://phantom.app/ul/browse/framoccino.github.io/Human-Hours/';
                         } else {
                             window.open('https://phantom.app/', '_blank');
                         }
                         break;
-                    case 'subwallet':
-                        // Add SubWallet connection logic
+
+                    case 'walletconnect':
+                        provider = new WalletConnectProvider(providerOptions.walletconnect.options);
+                        await provider.enable();
+                        web3 = new Web3(provider);
+                        accounts = await web3.eth.getAccounts();
+                        handleSuccessfulConnection(accounts[0]);
                         break;
                 }
             } catch (error) {
                 console.error('Error connecting wallet:', error);
+                alert('Failed to connect wallet. Please try again.');
             }
         }
+
+        function handleSuccessfulConnection(account) {
+            // Update button text
+            connectWalletBtn.textContent = `${account.slice(0, 6)}...${account.slice(-4)}`;
+            // Add connected class for styling
+            connectWalletBtn.classList.add('connected');
+            // Store in localStorage
+            localStorage.setItem('connectedWallet', account);
+            // Close modal
+            closeWalletModal();
+        }
+
+        function handleAccountsChanged(accounts) {
+            if (accounts.length === 0) {
+                // Handle disconnection
+                connectWalletBtn.textContent = 'Connect Wallet';
+                connectWalletBtn.classList.remove('connected');
+                localStorage.removeItem('connectedWallet');
+            } else {
+                handleSuccessfulConnection(accounts[0]);
+            }
+        }
+
+        // Check for existing connection on page load
+        window.addEventListener('load', () => {
+            const savedWallet = localStorage.getItem('connectedWallet');
+            if (savedWallet) {
+                handleSuccessfulConnection(savedWallet);
+            }
+        });
 
         // Update the connect wallet button click handler
         connectWalletBtn.onclick = openWalletModal;
