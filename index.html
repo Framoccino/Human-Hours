@@ -9,6 +9,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.1/dist/umd/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@1.7.1/dist/umd/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mobile-detect@1.4.5/mobile-detect.min.js"></script>
+    <!-- WalletConnect v2 Dependencies -->
+    <script src="https://unpkg.com/@walletconnect/core@2.18.0/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@reown/walletkit@1.2.0/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@walletconnect/utils@latest/dist/index.umd.js"></script>
     <style>
         .bg-custom-green { background-color: #22C55E; }
         .notifications-dropdown {
@@ -74,6 +78,30 @@
             width: 32px;
             height: 32px;
             margin-right: 1rem;
+        }
+
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+        }
+
+        .connection-status.show {
+            display: block;
+        }
+
+        .connection-status.success {
+            border-left: 4px solid #22C55E;
+        }
+
+        .connection-status.error {
+            border-left: 4px solid #EF4444;
         }
     </style>
 </head>
@@ -252,6 +280,10 @@
         </div>
     </div>
 
+    <div id="connectionStatus" class="connection-status">
+        <p id="connectionMessage"></p>
+    </div>
+
     <script>
         // Notifications functionality
         const notificationsBtn = document.querySelector('button:has(svg path[d*="M15 17h5"])');
@@ -308,41 +340,78 @@
             walletModal.classList.remove('show');
         }
 
+        // Initialize WalletConnect Core and WalletKit
+        const initWalletKit = async () => {
+            const core = new Core({
+                projectId: '915b3adf7f8d277f33d18e26150036d8'
+            });
+
+            const metadata = {
+                name: 'HumanHours',
+                description: 'P2P Skill Marketplace',
+                url: 'https://framoccino.github.io/Human-Hours/',
+                icons: ['https://framoccino.github.io/Human-Hours/logo.png']
+            };
+
+            try {
+                const walletKit = await WalletKit.init({
+                    core,
+                    metadata
+                });
+                
+                return walletKit;
+            } catch (error) {
+                console.error('Failed to initialize WalletKit:', error);
+                throw error;
+            }
+        };
+
+        // Add status notification function
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('connectionStatus');
+            const messageEl = document.getElementById('connectionMessage');
+            
+            status.className = `connection-status show ${type}`;
+            messageEl.textContent = message;
+            
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 3000);
+        }
+
+        // Update the connectWallet function
         async function connectWallet(type) {
             try {
+                const walletKit = await initWalletKit();
                 let accounts;
+
                 switch(type) {
                     case 'metamask':
                         if (typeof window.ethereum !== 'undefined') {
-                            // Modern dapp browsers
-                            web3 = new Web3(window.ethereum);
-                            accounts = await window.ethereum.request({ 
-                                method: 'eth_requestAccounts' 
-                            });
-                            
-                            // Subscribe to accounts change
-                            window.ethereum.on('accountsChanged', handleAccountsChanged);
-                            
-                            const account = accounts[0];
-                            handleSuccessfulConnection(account);
-                        } else if (window.matchMedia('(max-width: 768px)').matches) {
-                            // Mobile device without MetaMask
-                            window.location.href = 'https://metamask.app.link/dapp/framoccino.github.io/Human-Hours/';
+                            try {
+                                const connection = await walletKit.connectWallet('metamask');
+                                accounts = await connection.getAccounts();
+                                handleSuccessfulConnection(accounts[0]);
+                                showStatus('Successfully connected to MetaMask!');
+                            } catch (err) {
+                                showStatus('MetaMask connection rejected', 'error');
+                                throw err;
+                            }
                         } else {
-                            // Desktop without MetaMask
-                            window.open('https://metamask.io/download/', '_blank');
+                            showStatus('MetaMask not installed', 'error');
+                            if (window.matchMedia('(max-width: 768px)').matches) {
+                                window.location.href = 'https://metamask.app.link/dapp/framoccino.github.io/Human-Hours/';
+                            } else {
+                                window.open('https://metamask.io/download/', '_blank');
+                            }
                         }
                         break;
 
                     case 'phantom':
                         if ('solana' in window) {
-                            try {
-                                const resp = await window.solana.connect();
-                                accounts = resp.publicKey.toString();
-                                handleSuccessfulConnection(accounts);
-                            } catch (err) {
-                                console.error('Phantom connection error:', err);
-                            }
+                            const connection = await walletKit.connectWallet('phantom');
+                            accounts = await connection.getAccounts();
+                            handleSuccessfulConnection(accounts[0]);
                         } else if (window.matchMedia('(max-width: 768px)').matches) {
                             window.location.href = 'https://phantom.app/ul/browse/framoccino.github.io/Human-Hours/';
                         } else {
@@ -351,16 +420,14 @@
                         break;
 
                     case 'walletconnect':
-                        provider = new WalletConnectProvider(providerOptions.walletconnect.options);
-                        await provider.enable();
-                        web3 = new Web3(provider);
-                        accounts = await web3.eth.getAccounts();
+                        const connection = await walletKit.connectWallet('walletconnect');
+                        accounts = await connection.getAccounts();
                         handleSuccessfulConnection(accounts[0]);
                         break;
                 }
             } catch (error) {
                 console.error('Error connecting wallet:', error);
-                alert('Failed to connect wallet. Please try again.');
+                showStatus(`Connection failed: ${error.message}`, 'error');
             }
         }
 
@@ -375,17 +442,6 @@
             closeWalletModal();
         }
 
-        function handleAccountsChanged(accounts) {
-            if (accounts.length === 0) {
-                // Handle disconnection
-                connectWalletBtn.textContent = 'Connect Wallet';
-                connectWalletBtn.classList.remove('connected');
-                localStorage.removeItem('connectedWallet');
-            } else {
-                handleSuccessfulConnection(accounts[0]);
-            }
-        }
-
         // Check for existing connection on page load
         window.addEventListener('load', () => {
             const savedWallet = localStorage.getItem('connectedWallet');
@@ -396,6 +452,27 @@
 
         // Update the connect wallet button click handler
         connectWalletBtn.onclick = openWalletModal;
+
+        // Add event listener for wallet events
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const walletKit = await initWalletKit();
+                
+                walletKit.on('connect', (connection) => {
+                    console.log('Wallet connected:', connection);
+                    showStatus('Wallet connected successfully!');
+                });
+
+                walletKit.on('disconnect', () => {
+                    console.log('Wallet disconnected');
+                    showStatus('Wallet disconnected', 'error');
+                    handleAccountsChanged([]);
+                });
+            } catch (error) {
+                console.error('Failed to initialize wallet events:', error);
+                showStatus('Failed to initialize wallet connection', 'error');
+            }
+        });
     </script>
 </body>
 </html> 
