@@ -7,11 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/mobile-detect@1.4.5/mobile-detect.min.js"></script>
     <!-- WalletConnect v2 Dependencies -->
-    <script src="https://unpkg.com/@walletconnect/web3-provider@2.0.0/dist/umd/index.min.js"></script>
-    <script src="https://unpkg.com/@walletconnect/core@2.0.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@walletconnect/sign-client@2.0.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@walletconnect/types@2.0.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@walletconnect/utils@2.0.0/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@walletconnect/web3-provider"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
     <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
     <style>
         .bg-custom-green { background-color: #22C55E; }
@@ -308,16 +305,15 @@
         let web3;
         let provider;
 
-        const providerOptions = {
-            walletconnect: {
-                package: WalletConnectProvider,
-                options: {
-                    rpc: {
-                        1: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID", // Ethereum Mainnet
-                        137: "https://polygon-rpc.com", // Polygon Mainnet
-                    },
+        const initWalletConnect = () => {
+            return new WalletConnectProvider({
+                projectId: '915b3adf7f8d277f33d18e26150036d8',
+                chains: [1, 137],
+                rpc: {
+                    1: 'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
+                    137: 'https://polygon-rpc.com'
                 }
-            }
+            });
         };
 
         function openWalletModal() {
@@ -340,35 +336,6 @@
             walletModal.classList.remove('show');
         }
 
-        // Initialize WalletConnect Core and WalletKit
-        const initWalletKit = async () => {
-            try {
-                const core = new WalletConnect.Core({
-                    projectId: '915b3adf7f8d277f33d18e26150036d8',
-                    logger: 'debug',
-                    relayUrl: 'wss://relay.walletconnect.com',
-                    metadata: {
-                        name: 'HumanHours',
-                        description: 'P2P Skill Marketplace',
-                        url: 'https://framoccino.github.io/Human-Hours/',
-                        icons: ['https://framoccino.github.io/Human-Hours/logo.png']
-                    }
-                });
-
-                const walletKit = await WalletConnect.Client.init({
-                    core,
-                    chains: [1, 137], // Ethereum and Polygon
-                    methods: ['eth_sendTransaction', 'eth_signTransaction', 'eth_sign'],
-                    events: ['chainChanged', 'accountsChanged']
-                });
-                
-                return walletKit;
-            } catch (error) {
-                console.error('Failed to initialize WalletKit:', error);
-                throw error;
-            }
-        };
-
         // Add status notification function
         function showStatus(message, type = 'success') {
             const status = document.getElementById('connectionStatus');
@@ -385,17 +352,15 @@
         // Update the connectWallet function
         async function connectWallet(type) {
             try {
-                const walletKit = await initWalletKit();
                 let accounts;
 
                 switch(type) {
                     case 'metamask':
                         if (typeof window.ethereum !== 'undefined') {
                             try {
-                                const connection = await window.ethereum.request({
+                                accounts = await window.ethereum.request({
                                     method: 'eth_requestAccounts'
                                 });
-                                accounts = connection;
                                 handleSuccessfulConnection(accounts[0]);
                                 showStatus('Successfully connected to MetaMask!');
                             } catch (err) {
@@ -412,42 +377,44 @@
                         }
                         break;
 
-                    case 'phantom':
-                        if ('solana' in window) {
-                            const connection = await walletKit.connectWallet('phantom');
-                            accounts = await connection.getAccounts();
-                            handleSuccessfulConnection(accounts[0]);
-                        } else if (window.matchMedia('(max-width: 768px)').matches) {
-                            window.location.href = 'https://phantom.app/ul/browse/framoccino.github.io/Human-Hours/';
-                        } else {
-                            window.open('https://phantom.app/', '_blank');
-                        }
-                        break;
-
                     case 'walletconnect':
                         try {
-                            const { uri, approval } = await walletKit.connect({
-                                requiredNamespaces: {
-                                    eip155: {
-                                        methods: ['eth_sendTransaction', 'eth_signTransaction'],
-                                        chains: ['eip155:1', 'eip155:137'],
-                                        events: ['chainChanged', 'accountsChanged']
-                                    }
-                                }
+                            const provider = initWalletConnect();
+                            await provider.enable();
+                            
+                            const web3 = new Web3(provider);
+                            accounts = await web3.eth.getAccounts();
+                            
+                            handleSuccessfulConnection(accounts[0]);
+                            showStatus('Successfully connected with WalletConnect!');
+                            
+                            provider.on("disconnect", () => {
+                                handleAccountsChanged([]);
                             });
-                            
-                            // Display QR code for mobile wallet scanning
-                            if (uri) {
-                                // You can use a QR code library to display this
-                                console.log('Scan this QR code with your wallet:', uri);
-                            }
-                            
-                            const session = await approval();
-                            const account = session.namespaces.eip155.accounts[0];
-                            handleSuccessfulConnection(account);
                         } catch (err) {
                             showStatus('WalletConnect connection failed', 'error');
                             throw err;
+                        }
+                        break;
+
+                    case 'phantom':
+                        if ('solana' in window) {
+                            try {
+                                const resp = await window.solana.connect();
+                                accounts = resp.publicKey.toString();
+                                handleSuccessfulConnection(accounts);
+                                showStatus('Successfully connected to Phantom!');
+                            } catch (err) {
+                                showStatus('Phantom connection rejected', 'error');
+                                throw err;
+                            }
+                        } else {
+                            showStatus('Phantom not installed', 'error');
+                            if (window.matchMedia('(max-width: 768px)').matches) {
+                                window.location.href = 'https://phantom.app/ul/browse/framoccino.github.io/Human-Hours/';
+                            } else {
+                                window.open('https://phantom.app/', '_blank');
+                            }
                         }
                         break;
                 }
