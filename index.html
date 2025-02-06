@@ -5,8 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Human Hours - P2P Skill Marketplace</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.1/dist/umd/index.min.js"></script>
     <style>
         .bg-custom-green { background-color: #22C55E; }
+        .notifications-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            width: 300px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            padding: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        .notifications-dropdown.show {
+            display: block;
+        }
+
+        .wallet-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wallet-modal.show {
+            display: flex;
+        }
+
+        .wallet-modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .wallet-option {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .wallet-option:hover {
+            background: #f3f4f6;
+        }
+
+        .wallet-option img {
+            width: 32px;
+            height: 32px;
+            margin-right: 1rem;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -32,6 +98,13 @@
             </div>
         </nav>
     </header>
+
+    <div class="notifications-dropdown" id="notificationsDropdown">
+        <div class="text-lg font-semibold mb-4">Notifications</div>
+        <div class="notifications-content">
+            <div class="text-gray-500 text-center py-4">No new notifications</div>
+        </div>
+    </div>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="space-y-8">
@@ -149,5 +222,96 @@
             </div>
         </div>
     </main>
+
+    <div class="wallet-modal" id="walletModal">
+        <div class="wallet-modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">Connect Wallet</h3>
+                <button onclick="closeWalletModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <button class="wallet-option w-full" onclick="connectWallet('metamask')">
+                    <img src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg" alt="MetaMask">
+                    <span>MetaMask</span>
+                </button>
+                <button class="wallet-option w-full" onclick="connectWallet('phantom')">
+                    <img src="https://raw.githubusercontent.com/phantom-labs/press-kit/main/phantom-logo.svg" alt="Phantom">
+                    <span>Phantom</span>
+                </button>
+                <button class="wallet-option w-full" onclick="connectWallet('subwallet')">
+                    <img src="https://docs.subwallet.app/img/logo.svg" alt="SubWallet">
+                    <span>SubWallet</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Notifications functionality
+        const notificationsBtn = document.querySelector('button:has(svg path[d*="M15 17h5"])');
+        const notificationsDropdown = document.getElementById('notificationsDropdown');
+
+        notificationsBtn.addEventListener('click', () => {
+            notificationsDropdown.classList.toggle('show');
+        });
+
+        // Close notifications when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!notificationsBtn.contains(e.target) && !notificationsDropdown.contains(e.target)) {
+                notificationsDropdown.classList.remove('show');
+            }
+        });
+
+        // Wallet connection functionality
+        const walletModal = document.getElementById('walletModal');
+        const connectWalletBtn = document.querySelector('button:contains("Connect Wallet")');
+
+        function openWalletModal() {
+            walletModal.classList.add('show');
+        }
+
+        function closeWalletModal() {
+            walletModal.classList.remove('show');
+        }
+
+        async function connectWallet(type) {
+            try {
+                let accounts;
+                switch(type) {
+                    case 'metamask':
+                        if (typeof window.ethereum !== 'undefined') {
+                            accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                            const account = accounts[0];
+                            connectWalletBtn.textContent = `${account.slice(0, 6)}...${account.slice(-4)}`;
+                            closeWalletModal();
+                        } else {
+                            window.open('https://metamask.io/download/', '_blank');
+                        }
+                        break;
+                    case 'phantom':
+                        if (window.solana) {
+                            accounts = await window.solana.connect();
+                            connectWalletBtn.textContent = `${accounts.publicKey.toString().slice(0, 6)}...`;
+                            closeWalletModal();
+                        } else {
+                            window.open('https://phantom.app/', '_blank');
+                        }
+                        break;
+                    case 'subwallet':
+                        // Add SubWallet connection logic
+                        break;
+                }
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+            }
+        }
+
+        // Update the connect wallet button click handler
+        connectWalletBtn.onclick = openWalletModal;
+    </script>
 </body>
 </html> 
