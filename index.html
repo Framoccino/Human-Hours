@@ -7,11 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/mobile-detect@1.4.5/mobile-detect.min.js"></script>
     <!-- WalletConnect v2 Dependencies -->
-    <script src="https://unpkg.com/@walletconnect/web3-provider@2.0.0/dist/umd/index.min.js"></script>
-    <script src="https://unpkg.com/@walletconnect/core@2.0.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@walletconnect/sign-client@2.0.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@walletconnect/types@2.0.0/dist/index.umd.js"></script>
-    <script src="https://unpkg.com/@walletconnect/utils@2.0.0/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@walletconnect/web3-provider"></script>
+    <script src="https://unpkg.com/@web3modal/standalone"></script>
     <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
     <style>
         .bg-custom-green { background-color: #22C55E; }
@@ -265,16 +262,16 @@
             </div>
             <div class="space-y-4">
                 <button class="wallet-option w-full" onclick="connectWallet('metamask')">
-                    <img src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg" alt="MetaMask">
+                    <img src="./images/metamask.svg" alt="MetaMask">
                     <span>MetaMask</span>
                 </button>
                 <button class="wallet-option w-full" onclick="connectWallet('phantom')">
-                    <img src="https://raw.githubusercontent.com/phantom-labs/press-kit/main/phantom-logo.svg" alt="Phantom">
+                    <img src="./images/phantom.svg" alt="Phantom">
                     <span>Phantom</span>
                 </button>
-                <button class="wallet-option w-full" onclick="connectWallet('subwallet')">
-                    <img src="https://docs.subwallet.app/img/logo.svg" alt="SubWallet">
-                    <span>SubWallet</span>
+                <button class="wallet-option w-full" onclick="connectWallet('walletconnect')">
+                    <img src="./images/walletconnect.svg" alt="WalletConnect">
+                    <span>WalletConnect</span>
                 </button>
             </div>
         </div>
@@ -340,31 +337,23 @@
             walletModal.classList.remove('show');
         }
 
-        // Initialize WalletConnect Core and WalletKit
-        const initWalletKit = async () => {
+        // Initialize WalletConnect
+        const initWalletConnect = async () => {
             try {
-                const core = new WalletConnect.Core({
+                const web3Modal = new window.Web3Modal.default({
                     projectId: '915b3adf7f8d277f33d18e26150036d8',
                     logger: 'debug',
-                    relayUrl: 'wss://relay.walletconnect.com',
                     metadata: {
                         name: 'HumanHours',
                         description: 'P2P Skill Marketplace',
                         url: 'https://framoccino.github.io/Human-Hours/',
-                        icons: ['https://framoccino.github.io/Human-Hours/logo.png']
+                        icons: ['./images/logo.png']
                     }
                 });
-
-                const walletKit = await WalletConnect.Client.init({
-                    core,
-                    chains: [1, 137], // Ethereum and Polygon
-                    methods: ['eth_sendTransaction', 'eth_signTransaction', 'eth_sign'],
-                    events: ['chainChanged', 'accountsChanged']
-                });
                 
-                return walletKit;
+                return web3Modal;
             } catch (error) {
-                console.error('Failed to initialize WalletKit:', error);
+                console.error('Failed to initialize WalletConnect:', error);
                 throw error;
             }
         };
@@ -385,7 +374,7 @@
         // Update the connectWallet function
         async function connectWallet(type) {
             try {
-                const walletKit = await initWalletKit();
+                const web3Modal = await initWalletConnect();
                 let accounts;
 
                 switch(type) {
@@ -414,7 +403,7 @@
 
                     case 'phantom':
                         if ('solana' in window) {
-                            const connection = await walletKit.connectWallet('phantom');
+                            const connection = await web3Modal.connectTo('phantom');
                             accounts = await connection.getAccounts();
                             handleSuccessfulConnection(accounts[0]);
                         } else if (window.matchMedia('(max-width: 768px)').matches) {
@@ -426,15 +415,7 @@
 
                     case 'walletconnect':
                         try {
-                            const { uri, approval } = await walletKit.connect({
-                                requiredNamespaces: {
-                                    eip155: {
-                                        methods: ['eth_sendTransaction', 'eth_signTransaction'],
-                                        chains: ['eip155:1', 'eip155:137'],
-                                        events: ['chainChanged', 'accountsChanged']
-                                    }
-                                }
-                            });
+                            const { uri, approval } = await web3Modal.connectTo('walletconnect');
                             
                             // Display QR code for mobile wallet scanning
                             if (uri) {
@@ -482,14 +463,14 @@
         // Add event listener for wallet events
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                const walletKit = await initWalletKit();
+                const web3Modal = await initWalletConnect();
                 
-                walletKit.on('connect', (connection) => {
+                web3Modal.on('connect', (connection) => {
                     console.log('Wallet connected:', connection);
                     showStatus('Wallet connected successfully!');
                 });
 
-                walletKit.on('disconnect', () => {
+                web3Modal.on('disconnect', () => {
                     console.log('Wallet disconnected');
                     showStatus('Wallet disconnected', 'error');
                     handleAccountsChanged([]);
