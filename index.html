@@ -6,9 +6,9 @@
     <title>Human Hours - P2P Skill Marketplace</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <!-- Web3 and WalletConnect Dependencies -->
-    <script src="https://unpkg.com/@web3modal/ethereum@2.7.1"></script>
-    <script src="https://unpkg.com/@web3modal/html@2.7.1"></script>
-    <script src="https://unpkg.com/viem"></script>
+    <script src="https://unpkg.com/@web3modal/ethereum@2.7.1/dist/cdn.js"></script>
+    <script src="https://unpkg.com/@web3modal/html@2.7.1/dist/cdn.js"></script>
+    <script src="https://unpkg.com/viem@1.19.11/dist/cdn.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.9.0/dist/web3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mobile-detect@1.4.5/mobile-detect.min.js"></script>
     <style>
@@ -254,33 +254,6 @@
         </div>
     </main>
 
-    <div class="wallet-modal" id="walletModal">
-        <div class="wallet-modal-content">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold">Connect Wallet</h3>
-                <button onclick="closeWalletModal()" class="text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <div class="space-y-4">
-                <button class="wallet-option w-full" onclick="connectWallet('metamask')">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg" alt="MetaMask">
-                    <span>MetaMask</span>
-                </button>
-                <button class="wallet-option w-full" onclick="connectWallet('phantom')">
-                    <img src="https://www.gitbook.com/cdn-cgi/image/width=40,height=40,fit=contain,dpr=2,format=auto/https%3A%2F%2F2799188404-files.gitbook.io%2F~%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FKX9JrHyZM07ow3DIAaST%252Ficon%252F4YXh6XvEz9k2DwBkzDGz%252FPhantom%2520icon%2520-%2520Color%2520on%2520white.png%3Falt%3Dmedia%26token%3Dcb3c005c-120c-4567-8eac-8cde8c56c594" alt="Phantom">
-                    <span>Phantom</span>
-                </button>
-                <button class="wallet-option w-full" onclick="connectWallet('subwallet')">
-                    <img src="https://docs.subwallet.app/img/logo.png" alt="SubWallet">
-                    <span>SubWallet</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
     <div id="connectionStatus" class="connection-status">
         <p id="connectionMessage"></p>
     </div>
@@ -301,129 +274,48 @@
             }
         });
 
-        // Wallet connection functionality
-        const walletModal = document.getElementById('walletModal');
-        const connectWalletBtn = document.querySelector('button.px-4.py-2.bg-green-600');
-
         // Initialize Web3Modal
         const projectId = '915b3adf7f8d277f33d18e26150036d8';
 
-        const web3modal = new Web3Modal.default({
-            projectId: projectId,
-            theme: 'light',
-            accentColor: 'green',
-            ethereum: {
-                appName: 'Human Hours',
-                autoConnect: true,
-                chains: [
-                    {
-                        id: 1,
-                        name: 'Ethereum',
-                        rpcUrl: 'https://ethereum.rpc.thirdweb.com'
-                    },
-                    {
-                        id: 137,
-                        name: 'Polygon',
-                        rpcUrl: 'https://polygon.rpc.thirdweb.com'
-                    }
-                ]
-            }
+        const ethereumClient = window.w3m.createEthereumClient({
+            projectId,
+            chains: [{
+                id: 1,
+                name: 'Ethereum',
+                rpcUrl: 'https://ethereum.rpc.thirdweb.com'
+            }, {
+                id: 137,
+                name: 'Polygon',
+                rpcUrl: 'https://polygon.rpc.thirdweb.com'
+            }]
         });
 
-        function openWalletModal() {
-            const md = new MobileDetect(window.navigator.userAgent);
-            if (md.mobile()) {
-                // If on mobile, directly open wallet apps
-                const walletDeepLinks = {
-                    metamask: 'https://metamask.app.link/dapp/framoccino.github.io/Human-Hours/',
-                    phantom: 'https://phantom.app/ul/browse/framoccino.github.io/Human-Hours/',
-                    subwallet: 'https://subwallet.app/download'
-                };
-                walletModal.classList.add('show');
+        const web3modal = window.w3m.createWeb3Modal({
+            projectId,
+            themeMode: 'light',
+            themeVariables: {
+                '--w3m-accent-color': '#22C55E'
+            },
+            ethereumClient
+        });
+
+        // Remove the old modal HTML since we're using Web3Modal's UI
+        document.querySelector('#walletModal')?.remove();
+
+        // Update the connect button
+        const connectButton = document.createElement('w3m-button');
+        connectButton.classList.add('px-4', 'py-2', 'bg-green-600', 'text-white', 'rounded-md', 'hover:bg-green-700', 'transition-colors');
+        
+        // Replace the old button with the new Web3Modal button
+        const oldButton = document.querySelector('button.px-4.py-2.bg-green-600');
+        oldButton.parentNode.replaceChild(connectButton, oldButton);
+
+        // Handle connection events
+        ethereumClient.watchAccount((account) => {
+            if (account.address) {
+                showStatus(`Connected: ${account.address.slice(0, 6)}...${account.address.slice(-4)}`);
             } else {
-                // On desktop, show modal
-                walletModal.classList.add('show');
-            }
-        }
-
-        function closeWalletModal() {
-            walletModal.classList.remove('show');
-        }
-
-        // Add status notification function
-        function showStatus(message, type = 'success') {
-            const status = document.getElementById('connectionStatus');
-            const messageEl = document.getElementById('connectionMessage');
-            
-            status.className = `connection-status show ${type}`;
-            messageEl.textContent = message;
-            
-            setTimeout(() => {
-                status.classList.remove('show');
-            }, 3000);
-        }
-
-        // Update the connectWallet function
-        async function connectWallet() {
-            try {
-                const connection = await web3modal.connect();
-                showStatus('Successfully connected wallet!');
-                
-                // Handle the connected account
-                const accounts = await connection.request({ method: 'eth_accounts' });
-                if (accounts.length > 0) {
-                    handleSuccessfulConnection(accounts[0]);
-                }
-
-                // Subscribe to accounts change
-                connection.on('accountsChanged', handleAccountsChanged);
-                
-            } catch (error) {
-                console.error('Connection failed:', error);
-                showStatus('Failed to connect wallet', 'error');
-            }
-        }
-
-        function handleSuccessfulConnection(account) {
-            // Update button text
-            connectWalletBtn.textContent = `${account.slice(0, 6)}...${account.slice(-4)}`;
-            // Add connected class for styling
-            connectWalletBtn.classList.add('connected');
-            // Store in localStorage
-            localStorage.setItem('connectedWallet', account);
-            // Close modal
-            closeWalletModal();
-        }
-
-        // Check for existing connection on page load
-        window.addEventListener('load', () => {
-            const savedWallet = localStorage.getItem('connectedWallet');
-            if (savedWallet) {
-                handleSuccessfulConnection(savedWallet);
-            }
-        });
-
-        // Update the connect button click handler
-        connectWalletBtn.onclick = () => web3modal.openModal();
-
-        // Add event listener for wallet events
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const walletKit = await initWalletKit();
-                
-                walletKit.on('connect', (connection) => {
-                    console.log('Wallet connected:', connection);
-                    showStatus('Wallet connected successfully!');
-                });
-
-                walletKit.on('disconnect', () => {
-                    console.log('Wallet disconnected');
-                    showStatus('Wallet disconnected', 'error');
-                    handleAccountsChanged([]);
-                });
-            } catch (error) {
-                console.error('Failed to initialize wallet events:', error);
-                showStatus('Failed to initialize wallet connection', 'error');
+                showStatus('Disconnected', 'error');
             }
         });
     </script>
