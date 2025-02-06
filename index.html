@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Hours - P2P Skill Marketplace</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .bg-custom-green { background-color: #22C55E; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <header class="bg-white shadow-sm">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="text-green-600 font-bold text-xl">HUMAN HOURS</div>
+            <div class="flex items-center space-x-4">
+                <button class="p-2">
+                    <span class="sr-only">Notifications</span>
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                </button>
+                <button class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                    Connect Wallet
+                </button>
+                <button class="p-2">
+                    <span class="sr-only">User menu</span>
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="space-y-8">
+            <div class="space-y-4">
+                <h1 class="text-3xl font-bold">Welcome Back</h1>
+                <div class="relative">
+                    <input type="text" 
+                           class="w-full p-4 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+                           placeholder="What do you want to do today?">
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h2 class="text-xl font-semibold">Validated Skills</h2>
+                <div class="flex flex-wrap gap-4">
+                    <div class="flex items-center space-x-2 px-4 py-2 bg-white rounded-full border border-gray-200">
+                        <svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Gardening</span>
+                        <span class="text-gray-500">(12)</span>
+                    </div>
+                    <div class="flex items-center space-x-2 px-4 py-2 bg-white rounded-full border border-gray-200">
+                        <svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Photography</span>
+                        <span class="text-gray-500">(8)</span>
+                    </div>
+                    <div class="flex items-center space-x-2 px-4 py-2 bg-white rounded-full border border-gray-200">
+                        <svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Cooking</span>
+                        <span class="text-gray-500">(15)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex space-x-4">
+                <button class="px-4 py-2 font-medium rounded-md bg-green-600 text-white">Add $HH</button>
+                <button class="px-4 py-2 font-medium">Use $HH</button>
+                <button class="px-4 py-2 font-medium">Analytics</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Garden Maintenance Card -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-4">Help with Garden Maintenance</h3>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex items-center text-gray-600">
+                            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            </svg>
+                            Brooklyn, NY
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            3 hours
+                        </div>
+                    </div>
+                    <p class="text-gray-600 mb-4">Need help with pruning trees and planting new flowers in my backyard garden.</p>
+                    <button class="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                        Learn More
+                    </button>
+                </div>
+
+                <!-- Photography Card -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-4">Teach Basic Photography</h3>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex items-center text-gray-600">
+                            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            </svg>
+                            Online
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            2 hours
+                        </div>
+                    </div>
+                    <p class="text-gray-600 mb-4">Looking for someone to teach me the basics of DSLR photography and photo editing.</p>
+                    <button class="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                        Learn More
+                    </button>
+                </div>
+
+                <!-- Cooking Card -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-semibold mb-4">Cook Healthy Meals</h3>
+                    <div class="space-y-2 mb-4">
+                        <div class="flex items-center text-gray-600">
+                            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            </svg>
+                            Manhattan, NY
+                        </div>
+                        <div class="flex items-center text-gray-600">
+                            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            4 hours
+                        </div>
+                    </div>
+                    <p class="text-gray-600 mb-4">Need assistance preparing a week's worth of healthy meal prep for my family.</p>
+                    <button class="w-full py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                        Learn More
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html> 
