@@ -281,6 +281,50 @@
         <p id="connectionMessage"></p>
     </div>
 
+    <div class="profile-setup-modal" id="profileSetupModal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-6">Complete Your Profile</h2>
+            <form id="profileSetupForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" id="profileName" required
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Skills (comma separated)</label>
+                    <input type="text" id="profileSkills" required
+                           placeholder="e.g., Guitar, Cooking, Programming"
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Location</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="profileLocation" required readonly
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                        <button type="button" onclick="getLocation()" 
+                                class="mt-1 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                            <svg class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            </svg>
+                            Get Location
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Interests</label>
+                    <textarea id="profileInterests" required
+                             placeholder="What kind of activities are you interested in?"
+                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"></textarea>
+                </div>
+                <button type="submit" 
+                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    Complete Profile
+                </button>
+            </form>
+        </div>
+    </div>
+
     <script>
         // Notifications functionality
         const notificationsBtn = document.querySelector('button:has(svg path[d*="M15 17h5"])');
@@ -446,7 +490,62 @@
             localStorage.setItem('connectedWallet', account);
             // Close modal
             closeWalletModal();
+            
+            // Check if profile exists
+            const profile = localStorage.getItem(`profile_${account}`);
+            if (!profile) {
+                showProfileSetup();
+            }
         }
+
+        function showProfileSetup() {
+            const modal = document.getElementById('profileSetupModal');
+            modal.classList.add('show');
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        // Get city name from coordinates
+                        fetch(`https://api.opencagedata.com/geocode/v1/json?q=${position.coords.latitude}+${position.coords.longitude}&key=YOUR_OPENCAGE_API_KEY`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const location = data.results[0].formatted;
+                                document.getElementById('profileLocation').value = location;
+                            });
+                    },
+                    error => {
+                        showStatus('Location access denied', 'error');
+                    }
+                );
+            }
+        }
+
+        document.getElementById('profileSetupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const account = localStorage.getItem('connectedWallet');
+            const profile = {
+                name: document.getElementById('profileName').value,
+                skills: document.getElementById('profileSkills').value.split(',').map(s => s.trim()),
+                location: document.getElementById('profileLocation').value,
+                interests: document.getElementById('profileInterests').value,
+                createdAt: new Date().toISOString()
+            };
+            
+            // Store profile in localStorage (later will be on-chain)
+            localStorage.setItem(`profile_${account}`, JSON.stringify(profile));
+            
+            // Hide modal
+            document.getElementById('profileSetupModal').classList.remove('show');
+            
+            // Show success message
+            showStatus('Profile created successfully!');
+            
+            // Refresh dashboard with personalized content
+            loadDashboard(profile);
+        });
 
         // Check for existing connection on page load
         window.addEventListener('load', () => {
